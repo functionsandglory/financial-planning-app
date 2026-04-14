@@ -253,7 +253,7 @@ describe('Monte Carlo Simulation - Timeline Events System', () => {
   // =============================================================================
 
   describe('event timeline features', () => {
-    it('should handle events with start and end years', () => {
+    it('should handle events with start and end years (finite recurring)', () => {
       const input: MonteCarloInput = {
         accounts: [
           {
@@ -289,6 +289,43 @@ describe('Monte Carlo Simulation - Timeline Events System', () => {
       
       // Still grows from years 20-30 due to investment returns, but slower
       expect(year30Balance).toBeGreaterThan(year20Balance)
+    })
+
+    it('should handle events with no end year (infinite recurring)', () => {
+      const input: MonteCarloInput = {
+        accounts: [
+          {
+            id: '401k-1',
+            name: '401k',
+            type: '401k',
+            currentBalance: 50000,
+            assetAllocation: [{ assetClassId: 'stocks', percentage: 1.0 }],
+          },
+        ],
+        assetClasses: [stocksAsset],
+        events: [
+          {
+            id: 'lifetime-savings',
+            name: 'Lifetime 401k Contribution',
+            type: 'savings',
+            amount: 1000, // $1k/month
+            frequency: 'monthly',
+            targetAccountId: '401k-1',
+            startYear: 0,
+            // No endYear - runs for entire simulation
+          },
+        ],
+        years: 40,
+        simulationCount: 1000,
+      }
+
+      const result = runMonteCarloSimulation(input)
+
+      // Should contribute $1k/month for all 40 years
+      // Total contributions: $1k * 12 * 40 = $480k
+      // Plus initial $50k and growth
+      const finalBalance = result.yearlyPercentiles[40].p50
+      expect(finalBalance).toBeGreaterThan(50000 + 480000)
     })
 
     it('should handle multiple events with different timelines', () => {
